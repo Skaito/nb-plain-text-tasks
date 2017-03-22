@@ -21,6 +21,8 @@ public class Task {
 	private StyledDocument doc;
 	private int number, start, length;
 	private Matcher m;
+	/** If true then matcher m matched something else not. */
+	private boolean mOk = false;
 	private Value value = Value.NONE;
 	private Date time = null;
 	private SimpleDateFormat timeFormat;
@@ -62,8 +64,8 @@ public class Task {
 		}
 		if (value != Value.NONE) timeVal = " @" + timeVal + "(" + timeFormat.format(time) + ")";
 		int lenDiff = 0;
-		int cbLen = m.group("cb").length(), cbOff = m.start("cb");
-		int timeLen = m.group("time").length(), timeOff = m.start("time");
+		int cbLen = (mOk ? m.group("cb").length() : 0), cbOff = (mOk ? m.start("cb") : 0);
+		int timeLen = (mOk ? m.group("time").length() : 0), timeOff = (mOk ? m.start("time") : 0);
 		try {
 			if (cbLen > 0) doc.remove(start + cbOff, cbLen);
 			if (value != Value.NONE) {
@@ -84,13 +86,20 @@ public class Task {
 		task.doc = (StyledDocument) editor.getDocument();
 		task.number = NbDocument.findLineNumber(task.doc, editor.getCaretPosition());
 		task.start = NbDocument.findLineOffset(task.doc, task.number);
-		task.length = NbDocument.findLineOffset(task.doc, task.number + 1) - task.start;
+		int lastLine = NbDocument.findLineNumber(task.doc, task.doc.getLength());
+		if (task.number < lastLine) {			
+			task.length = NbDocument.findLineOffset(task.doc, task.number + 1) - task.start;
+		} else {
+			task.length = task.doc.getLength() - task.start;
+		}
 		
 		try {
 			String line = task.doc.getText(task.start, task.length);
 			Pattern p = Pattern.compile("[\\ \\t]*(?<cb>(?:\\[(?<cbValue>[^\\[\\]])\\]|(?<cbValueAlt>[\\u2610\\u2714\\u2718]))(?: |)|)[^\\n\\r\\@]+(?<time> \\@[a-z]+\\((?<timeValue>[^\\(\\)]+)\\)|)[\\r\\n]*", Pattern.CASE_INSENSITIVE);
 			task.m = p.matcher(line);
+			task.mOk = false;
 			if (task.m.matches()) {
+				task.mOk = true;
 				String cbVal = task.m.group("cbValue"), timeVal = task.m.group("timeValue");
 				if (cbVal == null) cbVal = task.m.group("cbValueAlt");
 				if (cbVal == null) cbVal = "";
