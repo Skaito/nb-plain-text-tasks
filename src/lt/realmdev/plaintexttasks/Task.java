@@ -19,6 +19,7 @@ import org.openide.text.NbDocument;
 public class Task {
 	
 	private StyledDocument doc;
+	private JTextComponent editor;
 	private int number, start, length;
 	private Matcher m;
 	/** If true then matcher m matched something else not. */
@@ -38,6 +39,8 @@ public class Task {
 		if (this.value != value) {
 			time = Calendar.getInstance().getTime();
 		}
+		Value oldValue = this.value;
+		int caretPos = editor.getCaretPosition();
 		this.value = value;
 		
 		String cbVal, timeVal;
@@ -74,9 +77,13 @@ public class Task {
 			lenDiff -= (cbLen - cbVal.length());
 			if (timeLen > 0) doc.remove(start + timeOff + lenDiff, timeLen);
 			if (value != Value.NONE) NbDocument.insertGuarded(doc, start + timeOff + lenDiff, timeVal);
-			if (!mOk || m.group("content").trim().isEmpty()) {
-				JTextComponent editor = EditorRegistry.lastFocusedComponent();
-				editor.setCaretPosition(start + cbOff + cbVal.length());
+			boolean fromEmpty = (!mOk || m.group("content").trim().isEmpty());
+			if (fromEmpty || oldValue == Value.NONE) {
+				if (fromEmpty) {
+					editor.setCaretPosition(start + cbOff + cbVal.length());
+				} else {
+					editor.setCaretPosition(caretPos + cbVal.length());
+				}
 			}
 		} catch (BadLocationException ex) {}
 		
@@ -85,10 +92,10 @@ public class Task {
 	public static Task findUnderCursor() {
 		Task task = new Task();
 		
-		JTextComponent editor = EditorRegistry.lastFocusedComponent();
+		task.editor = EditorRegistry.lastFocusedComponent();
 		task.timeFormat = new SimpleDateFormat("yyyy-MM-dd' 'HH:mm:ss");
-		task.doc = (StyledDocument) editor.getDocument();
-		task.number = NbDocument.findLineNumber(task.doc, editor.getCaretPosition());
+		task.doc = (StyledDocument) task.editor.getDocument();
+		task.number = NbDocument.findLineNumber(task.doc, task.editor.getCaretPosition());
 		task.start = NbDocument.findLineOffset(task.doc, task.number);
 		int lastLine = NbDocument.findLineNumber(task.doc, task.doc.getLength());
 		if (task.number < lastLine) {			
