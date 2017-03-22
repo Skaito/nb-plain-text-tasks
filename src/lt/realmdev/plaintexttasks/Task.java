@@ -74,6 +74,10 @@ public class Task {
 			lenDiff -= (cbLen - cbVal.length());
 			if (timeLen > 0) doc.remove(start + timeOff + lenDiff, timeLen);
 			if (value != Value.NONE) NbDocument.insertGuarded(doc, start + timeOff + lenDiff, timeVal);
+			if (!mOk || m.group("content").trim().isEmpty()) {
+				JTextComponent editor = EditorRegistry.lastFocusedComponent();
+				editor.setCaretPosition(start + cbOff + cbVal.length());
+			}
 		} catch (BadLocationException ex) {}
 		
 	}
@@ -95,7 +99,7 @@ public class Task {
 		
 		try {
 			String line = task.doc.getText(task.start, task.length);
-			Pattern p = Pattern.compile("[\\ \\t]*(?<cb>(?:\\[(?<cbValue>[^\\[\\]])\\]|(?<cbValueAlt>[\\u2610\\u2714\\u2718]))(?: |)|)[^\\n\\r\\@]+(?<time> \\@[a-z]+\\((?<timeValue>[^\\(\\)]+)\\)|)[\\r\\n]*", Pattern.CASE_INSENSITIVE);
+			Pattern p = Pattern.compile("[\\ \\t]*(?<cb>(?:\\[(?<cbValue>[^\\[\\]])\\]|(?<cbValueAlt>[\\u2610\\u2714\\u2718]))(?: |)|)(?<content>[^\\n\\r\\@]+)(?<time> \\@[a-z]+\\((?<timeValue>[^\\(\\)]+)\\)|)[\\r\\n]*", Pattern.CASE_INSENSITIVE);
 			task.m = p.matcher(line);
 			task.mOk = false;
 			if (task.m.matches()) {
